@@ -11,7 +11,7 @@ const createMemory = (size) => {
 }
 
 class CPU {
-  constructor(memory) {
+  constructor(memory, memSize) {
     this.memory = memory;
 
     // Register Initialization
@@ -26,12 +26,15 @@ class CPU {
       return map;
     }, {});
     this.registers = createMemory(this.registerCount * 2);
+    
+    this.setRegister('rsp', memSize - 2);
   }
 
   // Register Getter and Setter
   getRegister(register) {
     return this.registers.getUint16(this.rInd[register]);
   }
+
   setRegister(register, val) {
     return this.registers.setUint16(this.rInd[register], val);
   }
@@ -66,15 +69,30 @@ class CPU {
   run(inst) {
     switch(inst) {
       case instruction.movl:
-        let r = this.getByte();
-        let vl = this.getShort();
-        this.registers.setUint16(r * 2, vl);
+        let r_movl = this.getByte();
+        let v_movl = this.getShort();
+        this.registers.setUint16(r_movl * 2, v_movl);
         return;
       case instruction.movr:
-        let r0 = this.getByte();
-        let r1 = this.getByte();
-        let vr = this.registers.getUint16(r1 * 2);
-        this.registers.setUint16(r0*2, vr);
+        let r0_movr = this.getByte();
+        let r1_movr = this.getByte();
+        let v_movr = this.registers.getUint16(r1_movr * 2);
+        this.registers.setUint16(r0_movr * 2, v_movr);
+        return;
+      case instruction.push:
+        let r_push = this.getByte();
+        let a_push = this.getRegister('rsp') - 2;
+        let v_push = this.registers.getUint16(r_push * 2);
+        this.setRegister('rsp', a_push);
+        this.memory.setUint16(a_push, v_push);
+        return;
+      case instruction.pop:
+        let r_pop = this.getByte();
+        let a_pop = this.getRegister('rsp');
+        let v_pop = this.memory.getUint16(a_pop);
+        this.registers.setUint16(r_pop * 2, v_pop);
+        this.setRegister('rsp', a_pop + 2);
+        return;
     }
   }
 
