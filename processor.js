@@ -15,11 +15,12 @@ class CPU {
     this.memory = memory;
 
     // Register Initialization
-    this.registerCount = 9;
+    this.registerCount = 10;
     this.registerLabels = [
       'r00', 'r01', 'r02',
       'r03', 'r04', 'r05',
-      'rip', 'rsp', 'rcd',
+      'rip', 'rsp', 'rbp',
+      'rcd',
     ];
     this.rInd = this.registerLabels.reduce((map, name, i) => {
       map[name] = i * 2;
@@ -500,58 +501,109 @@ class CPU {
 
       // <rcd> = <reg_0> - <reg_1>
       case instruction.cprr:
+        let r0_cprr = this.getByte() * 2;
+        let r1_cprr = this.getByte() * 2;
+        this.setRegister('rcd', this.registers.getUint16(r0_cprr) - this.registers.getUint16(r1_cprr));
         return;
 
       // <rcd> = <reg> - [mem]
       case instruction.cprm:
+        let r_cprm = this.getByte() * 2;
+        let a_cprm = this.getShort();
+        this.setRegister('rcd', this.registers.getUint16(r_cprm) - this.memory.getUint16(a_cprm));
         return;
 
       // <rcd> = [mem] - <reg>
       case instruction.cpmr:
+        let a_cprm = this.getShort();
+        let r_cprm = this.getByte() * 2;
+        this.setRegister('rcd', this.memory.getUint16(a_cprm) - this.registers.getUint16(r_cprm));
         return;
 
       // <rcd> = <reg> - $imm
       case instruction.cprl:
+        let r_cprl = this.getByte() * 2;
+        let l_cprl = this.getShort();
+        this.setRegister('rcd', this.registers.getUint16(r_cprl) - l_cprl);
         return;
 
       // <rcd> = [mem] - $imm
       case instruction.cpml:
+        let a_cpml = this.getShort();
+        let l_cpml = this.getShort();
+        this.setRegister('rcd', this.memory.getUint16(a_cpml) - l_cpml);
         return;
 
       // jump to address
       case instruction.jump:
+        let a_jump = this.getShort();
+        this.setRegister('rip', a_jump);
         return;
 
       // jump if <rcd> === 0
       case instruction.jpeq:
+        let a_jpeq = this.getShort();
+        if (this.getRegister('rcd') === 0) {
+          this.setRegister('rip', a_jpeq);
+        }
         return;
 
       // jump if <rcd> !== 0
       case instruction.jpne:
+        let a_jpne = this.getShort();
+        if (this.getRegister('rcd') !== 0) {
+          this.setRegister('rip', a_jpne);
+        }
         return;
 
       // jump if <rcd> < 0
       case instruction.jplt:
+        let a_jplt = this.getShort();
+        if (this.getRegister('rcd') < 0) {
+          this.setRegister('rip', a_jplt);
+        }
         return;
 
       // jump if <rcd> > 0
       case instruction.jpgt:
+        let a_jpgt = this.getShort();
+        if (this.getRegister('rcd') > 0) {
+          this.setRegister('rip', a_jpgt);
+        }
         return;
 
       // jump if <rcd> <= 0
       case instruction.jleq:
+        let a_jleq = this.getShort();
+        if (this.getRegister('rcd') <= 0) {
+          this.setRegister('rip', a_jleq);
+        }
         return;
 
       // jump if <rcd> >= 0
       case instruction.jgeq:
+        let a_jgeq = this.getShort();
+        if (this.getRegister('rcd') >= 0) {
+          this.setRegister('rip', a_jgeq);
+        }
         return;
 
       // Function Call
       case instruction.call:
+        let a_call = this.getShort();
+        let ret_call = this.getRegister('rip') + 1;
+        let s_call = this.getRegister('rsp') - 2;
+        this.memory.setUint16(s_call, ret_call);
+        this.setRegister('rsp', s_call);
+        this.setRegister('rip', a_call);
         return;
 
       // Return
       case instruction.ret:
+        let s_ret = this.getRegister('rsp');
+        let a_ret = this.memory.getUint16(s_ret);
+        this.setRegister('rsp', s_ret + 2);
+        this.setRegister('rip', a_ret);
         return;
 
       // No op
