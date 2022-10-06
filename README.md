@@ -1,4 +1,4 @@
-# xoroxor
+# ^o^
 xoroxor (stylized as ^o^) is a 16-bit virtual machine.
 
 ## ISA
