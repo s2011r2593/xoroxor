@@ -515,9 +515,9 @@ class CPU {
 
       // <rcd> = [mem] - <reg>
       case instruction.cpmr:
-        let a_cprm = this.getShort();
-        let r_cprm = this.getByte() * 2;
-        this.setRegister('rcd', this.memory.getUint16(a_cprm) - this.registers.getUint16(r_cprm));
+        let a_cpmr = this.getShort();
+        let r_cpmr = this.getByte() * 2;
+        this.setRegister('rcd', this.memory.getUint16(a_cpmr) - this.registers.getUint16(r_cpmr));
         return;
 
       // <rcd> = <reg> - $imm
@@ -607,7 +607,7 @@ class CPU {
         return;
 
       // No op
-      case noop:
+      case instruction.noop:
       default:
         return;
     }
