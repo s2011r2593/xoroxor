@@ -1,0 +1,10 @@
+{
+  "name": "xoroxor",
+  "version": "0.0.0",
+  "description": "a 16-bit virtual machine",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "license": "MIT"
+}
