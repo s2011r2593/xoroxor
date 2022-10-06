@@ -36,7 +36,7 @@ const cprr = i++; const cprm = i++; const cpmr = i++; const cprl = i++; const cp
 const jump = i++;                                                                         // jump
 const jpeq = i++; const jpne = i++;                                                       //  ===  !==
 const jplt = i++; const jpgt = i++;                                                       //    <  >
-const jleq = i++; const jgeq = i++;                                                       //   <=  >=
+const jplq = i++; const jpgq = i++;                                                       //   <=  >=
 const call = i++; const ret  = i++;                                                       // call  return
 
 module.exports = {
@@ -61,6 +61,6 @@ module.exports = {
   samr, cprr, cprm,
   cpmr, cprl, cpml,
   jump, jpeq, jpne,
-  jplt, jpgt, jleq,
-  jgeq, call, ret
+  jplt, jpgt, jplq: jplq,
+  jpgq, call, ret
 }

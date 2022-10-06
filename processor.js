@@ -1,4 +1,7 @@
+const fs = require('fs');
+
 const instruction = require('./instructions');
+const Parser = require('./parser');
 
 /*
  * Allocates memory for vm
@@ -13,6 +16,8 @@ const createMemory = (size) => {
 class CPU {
   constructor(memory, memSize) {
     this.memory = memory;
+    let write = new Uint8Array(memory.buffer);
+    this.parser = new Parser(write);
 
     // Register Initialization
     this.registerCount = 10;
@@ -573,18 +578,18 @@ class CPU {
         return;
 
       // jump if <rcd> <= 0
-      case instruction.jleq:
-        let a_jleq = this.getShort();
+      case instruction.jplq:
+        let a_jplq = this.getShort();
         if (this.getRegister('rcd') <= 0) {
-          this.setRegister('rip', a_jleq);
+          this.setRegister('rip', a_jplq);
         }
         return;
 
       // jump if <rcd> >= 0
-      case instruction.jgeq:
-        let a_jgeq = this.getShort();
+      case instruction.jpgq:
+        let a_jpgq = this.getShort();
         if (this.getRegister('rcd') >= 0) {
-          this.setRegister('rip', a_jgeq);
+          this.setRegister('rip', a_jpgq);
         }
         return;
 
@@ -617,6 +622,13 @@ class CPU {
   tick() {
     let inst = this.getByte();
     return this.run(inst);
+  }
+
+  execute(fpath) {
+    fs.readFile(fpath, 'utf8', (err, res) => {
+      if (err) throw err;
+      this.parser.process(res.replace(/(\r\n|\n|\r)/gm, ' ').replace(/\s\s+/g, ' '));
+    })
   }
 }
 
