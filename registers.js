@@ -11,7 +11,7 @@ const index = labels.reduce((map, name, i) => {
   return map;
 }, {});
 
-const ind = labels.reduce((map, name, i) => {
+const labelMap = labels.reduce((map, name, i) => {
   map[name] = i * 2;
   return map;
 }, {});
@@ -20,5 +20,5 @@ module.exports = {
   labels,
   count,
   index,
-  ind,
+  labelMap,
 }

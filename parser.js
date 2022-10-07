@@ -85,9 +85,6 @@ class Parser {
       return e.type;
     }).join('');
     let code = inst.xoxISA[this.state.currentOperation + opSpec];
-    if (this.state.currentOperation + opSpec === 'popr') {
-      console.log(code);
-    }
     this.write[this.state.programIndex++] = code;
     for (let i = 0; i < this.state.currentArguments.length; i++) {
       for (let j = 0; j < this.state.currentArguments[i].value.length; j++) {
