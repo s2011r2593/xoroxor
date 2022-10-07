@@ -31,13 +31,14 @@ const slrl = i++; const slrr = i++; const slml = i++;  const slmr = i++;        
 const srrl = i++; const srrr = i++; const srml = i++;  const srmr = i++;                   // shift logical right
 const sarl = i++; const sarr = i++; const saml = i++;  const samr = i++;                   // shift arithmetic right
 
-// Control 55~68
+// Control 55~69
 const cprr = i++; const cprm = i++; const cpmr = i++; const cprl = i++; const cpml = i++; // compare
 const jump = i++;                                                                         // jump
 const jpeq = i++; const jpne = i++;                                                       //  ===  !==
 const jplt = i++; const jpgt = i++;                                                       //    <  >
-const jleq = i++; const jgeq = i++;                                                       //   <=  >=
+const jplq = i++; const jpgq = i++;                                                       //   <=  >=
 const call = i++; const ret  = i++;                                                       // call  return
+const stop  = i++;
 
 module.exports = {
   noop, mvrr, mvrm,
@@ -61,6 +62,7 @@ module.exports = {
   samr, cprr, cprm,
   cpmr, cprl, cpml,
   jump, jpeq, jpne,
-  jplt, jpgt, jleq,
-  jgeq, call, ret
+  jplt, jpgt, jplq,
+  jpgq, call, ret,
+  stop,
 }
