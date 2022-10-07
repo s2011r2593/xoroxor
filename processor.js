@@ -913,7 +913,7 @@ class CPU {
           this.tick();
           this.viewRegisters();
           console.log(`next operation: ${Object.keys(instruction)[this.memory.getUint8(this.getRegister('rip'))]}`);
-          if (this.memory.getUint16(0) !== 0x1) {
+          if (this.memory.getUint8(0) !== state.execute) {
             rl.close();
           }
         });
@@ -922,7 +922,7 @@ class CPU {
   }
 
   boot() {
-    this.memory.setUint8(0, state.idle);
+    this.memory.setUint8(0, state.execute);
   }
 }
 
