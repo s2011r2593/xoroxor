@@ -3,6 +3,7 @@ const readline = require('readline');
 
 const instruction = require('./instructions');
 const register = require('./registers');
+const state = require('./machineStates');
 const Parser = require('./parser');
 
 /*
@@ -18,9 +19,7 @@ const createMemory = (size) => {
 class CPU {
   constructor(memory, memSize) {
     this.memory = memory;
-    this.stateSize = 2;
     let write = new Uint8Array(memory.buffer);
-    this.parser = new Parser(write, this.stateSize);
 
     // Register Initialization
     this.registers = createMemory(register.count * 2);
@@ -29,7 +28,10 @@ class CPU {
     this.setRegister('rip', this.stateSize);
 
     // Machine State
-    this.memory.setUint16(0, 0x1);
+    this.stateSize = 1;
+    this.parser = new Parser(write, this.stateSize);
+
+    this.boot();
   }
 
   // Register Getter and Setter
@@ -855,8 +857,7 @@ class CPU {
 
       // Stop
       case instruction.stop:
-        let state_stop = this.memory.getUint16(0) & 0xfe;
-        this.memory.setUint16(0, state_stop);
+        this.memory.setUint8(0, state.idle);
 
       // No op
       case instruction.noop:
@@ -888,7 +889,7 @@ class CPU {
     this.load(
       fpath,
       () => {
-        while (this.memory.getUint16(0) & 0x1) {
+        while (this.memory.getUint8(0) === state.execute) {
           this.tick();
         }
         this.viewRegisters();
@@ -918,6 +919,10 @@ class CPU {
         });
       }
     )
+  }
+
+  boot() {
+    this.memory.setUint8(0, state.idle);
   }
 }
 
