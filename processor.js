@@ -1,4 +1,5 @@
 const fs = require('fs');
+const readline = require('readline');
 
 const instruction = require('./instructions');
 const register = require('./registers');
@@ -870,15 +871,7 @@ class CPU {
     return this.run(inst);
   }
 
-  execute(fpath) {
-    const ex = () => {
-      while (this.memory.getUint16(0) & 0x1) {
-        this.tick();
-      }
-      // this.viewRegisters();
-      // this.peek(0xC2EF);
-    }
-
+  load(fpath, callback) {
     fs.readFile(fpath, 'utf8', (err, res) => {
       if (err) throw err;
       this.parser.process(
@@ -886,9 +879,45 @@ class CPU {
            .replace(/\s\s+/g, '')
            .replace(/, /g, ',')
            .replace(/;/g, ' ;'),
-        ex
+        callback,
       );
     });
+  }
+
+  execute(fpath) {
+    this.load(
+      fpath,
+      () => {
+        while (this.memory.getUint16(0) & 0x1) {
+          this.tick();
+        }
+        this.viewRegisters();
+      }
+    )
+  }
+
+  debug(fpath) {
+    this.load(
+      fpath,
+      () => {
+        const rl = readline.createInterface({
+          input: process.stdin,
+          output: process.stdout,
+        });
+        this.viewRegisters();
+        // console.log(`next operation: ${this.memory.getUint8(this.getRegister('rip'))}`);
+        console.log(`next operation: ${Object.keys(instruction)[this.memory.getUint8(this.getRegister('rip'))]}`);
+
+        rl.on('line', () => {
+          this.tick();
+          this.viewRegisters();
+          console.log(`next operation: ${Object.keys(instruction)[this.memory.getUint8(this.getRegister('rip'))]}`);
+          if (this.memory.getUint16(0) !== 0x1) {
+            rl.close();
+          }
+        });
+      }
+    )
   }
 }
 

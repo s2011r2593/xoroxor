@@ -1,8 +1,10 @@
 const processor = require('./processor');
 const instruction = require('./instructions')
 
-const size = 65536;
-const memory = processor.createMemory(size);
-const cpu = new processor.CPU(memory, size);
+const ram = 65536; // 64 KiB
+// const space = 8388608; // 8 MiB
+// const storage = processor.createMemory(space);
+const memory = processor.createMemory(ram);
+const cpu = new processor.CPU(memory, ram);
 
-cpu.execute('./sandbox/test.xrsm');
+cpu.debug('./sandbox/simple.xrsm');

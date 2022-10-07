@@ -1,7 +1,7 @@
 const instruction = require('./instructions');
 const register = require('./registers');
 
-const regex0 = / |\[/;
+const regex0 = / |\[|;/;
 const regex1 = /\]/;
 
 class Parser {
@@ -11,7 +11,7 @@ class Parser {
   }
 
   process(programString, callback) {
-    // console.log(programString);
+    console.log(programString);
     let state = {
       running: true,
       expect: 'op',
@@ -28,7 +28,6 @@ class Parser {
         case 'op':
           let operation = programString.substring(state.column, state.column + 3);
           if (operation === 'eof') {
-            this.write[state.programIndex] = instruction.stop;
             state.running = false;
           }
           state.curOp.push(operation);
@@ -53,7 +52,7 @@ class Parser {
               imm = imm.substring(1).padStart(4, '0');
               this.write[state.programIndex++] = parseInt(imm.substring(0,2), 16);
               this.write[state.programIndex++] = parseInt(imm.substring(2), 16);
-              if (programString[state.column] === ' ') {
+              if (programString[state.column] !== '[') {
                 state.curOp.push('l');
                 break;
               }
@@ -65,9 +64,9 @@ class Parser {
                 this.write[state.programIndex++] = 0;
               }
               let i = 1;
-              do {
+              while (!regex1.test(programString[state.column + i])) {
                 i++;
-              } while (!regex1.test(programString[state.column + i]));
+              };
               let pointer = programString.substring(state.column, state.column + i);
               let rc = pointer.replace(/[^%]/g, '').length;
               let cc = pointer.replace(/[^,]/g, '').length * 3;
@@ -117,6 +116,7 @@ class Parser {
                   break;
               }
               state.column += i;
+              state.displacement = 1;
               break;
             case ';':
               let inst = state.curOp[0];
@@ -195,7 +195,7 @@ class Parser {
                   break;
                 case 'ret':
                   break;
-                case 'eof':
+                case 'stp':
                   inst = 'stop';
                   break;
                 default:
