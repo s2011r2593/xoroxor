@@ -16,8 +16,9 @@ const createMemory = (size) => {
 class CPU {
   constructor(memory, memSize) {
     this.memory = memory;
+    this.stateSize = 2;
     let write = new Uint8Array(memory.buffer);
-    this.parser = new Parser(write);
+    this.parser = new Parser(write, this.stateSize);
 
     // Register Initialization
     this.registerCount = 10;
@@ -34,6 +35,10 @@ class CPU {
     this.registers = createMemory(this.registerCount * 2);
     
     this.setRegister('rsp', memSize - 2);
+    this.setRegister('rip', this.stateSize);
+
+    // Machine State
+    this.memory.setUint16(0, 0x1);
   }
 
   // Register Getter and Setter
@@ -857,6 +862,11 @@ class CPU {
         this.setRegister('rip', a_ret);
         return;
 
+      // Stop
+      case instruction.stop:
+        let state_stop = this.memory.getUint16(0) & 0xfe;
+        this.memory.setUint16(0, state_stop);
+
       // No op
       case instruction.noop:
       default:
@@ -871,13 +881,20 @@ class CPU {
   }
 
   execute(fpath) {
+    const ex = () => {
+      while (this.memory.getUint16(0) & 0x1) {
+        this.tick();
+      }
+    }
+
     fs.readFile(fpath, 'utf8', (err, res) => {
       if (err) throw err;
       this.parser.process(
         res.replace(/(\r\n|\n|\r)/gm, '')
            .replace(/\s\s+/g, '')
-           .replace(/;/g, ' ;')
-           .substring(1)
+           .replace(/, /g, ',')
+           .replace(/;/g, ' ;'),
+        ex
       );
     });
   }
