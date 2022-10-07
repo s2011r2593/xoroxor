@@ -1,6 +1,7 @@
 const fs = require('fs');
 
 const instruction = require('./instructions');
+const register = require('./registers');
 const Parser = require('./parser');
 
 /*
@@ -21,18 +22,7 @@ class CPU {
     this.parser = new Parser(write, this.stateSize);
 
     // Register Initialization
-    this.registerCount = 10;
-    this.registerLabels = [
-      'r00', 'r01', 'r02',
-      'r03', 'r04', 'r05',
-      'rip', 'rsp', 'rbp',
-      'rcd',
-    ];
-    this.rInd = this.registerLabels.reduce((map, name, i) => {
-      map[name] = i * 2;
-      return map;
-    }, {});
-    this.registers = createMemory(this.registerCount * 2);
+    this.registers = createMemory(register.count * 2);
     
     this.setRegister('rsp', memSize - 2);
     this.setRegister('rip', this.stateSize);
@@ -42,19 +32,19 @@ class CPU {
   }
 
   // Register Getter and Setter
-  getRegister(register) {
-    return this.registers.getUint16(this.rInd[register]);
+  getRegister(r) {
+    return this.registers.getUint16(register.ind[r]);
   }
 
-  setRegister(register, val) {
-    return this.registers.setUint16(this.rInd[register], val);
+  setRegister(r, val) {
+    return this.registers.setUint16(register.ind[r], val);
   }
 
   // Prints out register contents to console
   viewRegisters() {
     let x = {};
-    for (let i = 0; i < this.registerCount; i++) {
-      x[this.registerLabels[i]] = `0x${this.getRegister(this.registerLabels[i]).toString(16).padStart(4, '0')}`;
+    for (let i = 0; i < register.count; i++) {
+      x[register.labels[i]] = `0x${this.getRegister(register.labels[i]).toString(16).padStart(4, '0')}`;
     }
     console.table(x);
   }
@@ -885,6 +875,8 @@ class CPU {
       while (this.memory.getUint16(0) & 0x1) {
         this.tick();
       }
+      // this.viewRegisters();
+      // this.peek(0xC2EF);
     }
 
     fs.readFile(fpath, 'utf8', (err, res) => {

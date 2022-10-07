@@ -11,7 +11,7 @@ class Parser {
   }
 
   process(programString, callback) {
-    console.log(programString);
+    // console.log(programString);
     let state = {
       running: true,
       expect: 'op',
@@ -40,7 +40,7 @@ class Parser {
           switch(programString[state.column]) {
             case '%':
               let reg = programString.substring(state.column + 1, state.column + 4);
-              this.write[state.programIndex++] = register.rIndex[reg];
+              this.write[state.programIndex++] = register.index[reg];
               state.curOp.push('r');
               state.column += 4;
               break;
@@ -80,36 +80,36 @@ class Parser {
                   break;
                 case 1: // [%reg]
                   r0 = programString.substring(state.column + 2, state.column + 5)
-                  this.write[state.programIndex++] = register.rIndex[r0];
+                  this.write[state.programIndex++] = register.index[r0];
                   this.write[state.programIndex++] = 0;
                   this.write[state.programIndex++] = 0;
                   break;
                 case 4: // [,%reg]
                   r1 = programString.subString(state.column + 3, state.column + 6);
                   this.write[state.programIndex++] = 0;
-                  this.write[state.programIndex++] = register.rIndex[r1];
+                  this.write[state.programIndex++] = register.index[r1];
                   this.write[state.programIndex++] = 0;
                   break;
                 case 5: // [%reg,%reg]
                   r0 = programString.substring(state.column + 2, state.column + 5);
                   r1 = programString.substring(state.column + 7, state.column + 10);
-                  this.write[state.programIndex++] = register.rIndex[r0];
-                  this.write[state.programIndex++] = register.rIndex[r1];
+                  this.write[state.programIndex++] = register.index[r0];
+                  this.write[state.programIndex++] = register.index[r1];
                   this.write[state.programIndex++] = 0;
                   break;
                 case 7: // [,%reg,$imm]
                   r1 = programString.substring(state.column + 3, state.column + 6);
                   s = parseInt(programString.substring(state.column + 8, state.column + i), 16);
                   this.write[state.programIndex++] = 0;
-                  this.write[state.programIndex++] = register.rIndex[r1];
+                  this.write[state.programIndex++] = register.index[r1];
                   this.write[state.programIndex++] = s;
                   break;
                 case 8: // [%reg,%reg,$imm]
                   r0 = programString.substring(state.column + 2, state.column + 5);
                   r1 = programString.substring(state.column + 7, state.column + 10);
                   s = parseInt(programString.substring(state.column + 12, state.column + i), 16);
-                  this.write[state.programIndex++] = register.rIndex[r0];
-                  this.write[state.programIndex++] = register.rIndex[r1];
+                  this.write[state.programIndex++] = register.index[r0];
+                  this.write[state.programIndex++] = register.index[r1];
                   this.write[state.programIndex++] = s;
                   break;
                 default:
