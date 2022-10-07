@@ -1,215 +1,156 @@
-const instruction = require('./instructions');
-const register = require('./registers');
+const inst = require('./instructions');
+const registers = require('./registers');
 
-const regex0 = / |\[|;/;
+const delimiters = / |\[|,|\]|;/;
 const regex1 = /\]/;
+
+class Arg {
+  constructor(type, value) {
+    this.type = type; // r a i
+    this.value = [value]; // [0x00, 0x11, 0x22]
+  }
+}
 
 class Parser {
   constructor(write, addressFloor) {
     this.write = write;
     this.floor = addressFloor;
+    this.state = {};
+    this.program = '';
+
+    this.reset();
   }
 
-  process(programString, callback) {
-    console.log(programString);
-    let state = {
+  reset() {
+    this.state = {
       running: true,
       expect: 'op',
-      curOp: [],
-      argType: '',
-      column: 0,
-      displacement: 1,
-      opIndex: this.floor,
+      currentOperation: '',
+      currentArguments: [],
+      parseIndex: 0,
       programIndex: this.floor,
     }
+  }
 
-    while (state.running) {
-      switch(state.expect) {
-        case 'op':
-          let operation = programString.substring(state.column, state.column + 3);
-          if (operation === 'eof') {
-            state.running = false;
-          }
-          state.curOp.push(operation);
-          state.programIndex++;
-          state.expect = 'arg';
-          state.column += 4;
+  // Move to next non-space character
+  getNext() {
+    while (this.program[this.state.parseIndex] === ' ') {
+      this.state.parseIndex++;
+    }
+  }
+
+  readWord() {
+    let i = 1;
+    while (!delimiters.test(this.program[this.state.parseIndex + i])) {
+      i++;
+    }
+    let word = this.program.substring(this.state.parseIndex, this.state.parseIndex + i);
+    this.state.parseIndex += i;
+    return word;
+  }
+
+  parsePointer() {
+    let reg = [];
+    let imm = 0;
+    while (this.program[this.state.parseIndex++] !== ']') {
+      switch (this.program[this.state.parseIndex]) {
+        case '%':
+          this.state.parseIndex++;
+          reg.push(this.readWord());
           break;
+
+        case '$':
+          this.state.parseIndex++;
+          imm = parseInt(this.readWord(), 16);
+          break;
+      }
+    }
+
+    this.state.currentArguments.at(-1).value.push(
+      (reg.length !== imm)
+        ? registers.index[reg[0]]
+        : 0xff
+    );
+    this.state.currentArguments.at(-1).value.push(
+      ((imm !== 0) || (reg.length === 2))
+        ? registers.index[reg[1]]
+        : 0xff
+    );
+    this.state.currentArguments.at(-1).value.push(imm);
+  }
+
+  // Write Instruction to Memory
+  handleEOI() {
+    let opSpec = this.state.currentArguments.map((e) => {
+      return e.type;
+    }).join('');
+    let code = inst.xoxISA[this.state.currentOperation + opSpec];
+    if (this.state.currentOperation + opSpec === 'popr') {
+      console.log(code);
+    }
+    this.write[this.state.programIndex++] = code;
+    for (let i = 0; i < this.state.currentArguments.length; i++) {
+      for (let j = 0; j < this.state.currentArguments[i].value.length; j++) {
+        this.write[this.state.programIndex++] = this.state.currentArguments[i].value[j];
+      }
+    }
+
+    this.state.expect = 'op';
+    this.state.currentArguments = [];
+  }
+
+  process(program, callback) {
+    // console.log(programString);
+    this.program = program;
+    this.reset();
+
+    let noOffset = true;
+
+    while (this.state.running) {
+      this.getNext();
+      switch (this.state.expect) {
+        case 'op':
+          this.state.currentOperation = this.readWord();
+          this.state.running = (this.state.currentOperation !== 'eof');
+          this.state.expect = 'arg';
+          break;
+        
         case 'arg':
-          switch(programString[state.column]) {
+          switch (this.program[this.state.parseIndex]) {
             case '%':
-              let reg = programString.substring(state.column + 1, state.column + 4);
-              this.write[state.programIndex++] = register.index[reg];
-              state.curOp.push('r');
-              state.column += 4;
+              this.state.parseIndex++;
+              this.state.currentArguments.push(new Arg('r', registers.index[this.readWord()]));
               break;
+
             case '$':
-              let imm = '';
-              while (!regex0.test(programString[state.column])) {
-                imm += programString[state.column];
-                state.column++;
-              }
-              imm = imm.substring(1).padStart(4, '0');
-              this.write[state.programIndex++] = parseInt(imm.substring(0,2), 16);
-              this.write[state.programIndex++] = parseInt(imm.substring(2), 16);
-              if (programString[state.column] !== '[') {
-                state.curOp.push('l');
+              this.state.parseIndex++;
+              let imm = parseInt(this.readWord(), 16);
+              if (this.program[this.state.parseIndex] !== '[') {
+                this.state.currentArguments.push(new Arg('i', imm >> 8));
+                this.state.currentArguments.at(-1).value.push(imm & 0xff);
                 break;
               }
-              state.displacement = 0;
+              noOffset = false;
+              this.state.currentArguments.push(new Arg('a', imm >> 8));
+              this.state.currentArguments.at(-1).value.push(imm & 0xff);
+              
             case '[':
-              state.curOp.push('m');
-              if (state.displacement) {
-                this.write[state.programIndex++] = 0;
-                this.write[state.programIndex++] = 0;
+              if (noOffset) {
+                this.state.currentArguments.push(new Arg('a', 0));
+                this.state.currentArguments.at(-1).value.push(0);
+                noOffset = true;
               }
-              let i = 1;
-              while (!regex1.test(programString[state.column + i])) {
-                i++;
-              };
-              let pointer = programString.substring(state.column, state.column + i);
-              let rc = pointer.replace(/[^%]/g, '').length;
-              let cc = pointer.replace(/[^,]/g, '').length * 3;
-              let r0, r1, s;
-              switch(rc + cc) {
-                case 0: // []
-                  this.write[state.programIndex++] = 0;
-                  this.write[state.programIndex++] = 0;
-                  this.write[state.programIndex++] = 0;
-                  break;
-                case 1: // [%reg]
-                  r0 = programString.substring(state.column + 2, state.column + 5)
-                  this.write[state.programIndex++] = register.index[r0];
-                  this.write[state.programIndex++] = 0;
-                  this.write[state.programIndex++] = 0;
-                  break;
-                case 4: // [,%reg]
-                  r1 = programString.subString(state.column + 3, state.column + 6);
-                  this.write[state.programIndex++] = 0;
-                  this.write[state.programIndex++] = register.index[r1];
-                  this.write[state.programIndex++] = 0;
-                  break;
-                case 5: // [%reg,%reg]
-                  r0 = programString.substring(state.column + 2, state.column + 5);
-                  r1 = programString.substring(state.column + 7, state.column + 10);
-                  this.write[state.programIndex++] = register.index[r0];
-                  this.write[state.programIndex++] = register.index[r1];
-                  this.write[state.programIndex++] = 0;
-                  break;
-                case 7: // [,%reg,$imm]
-                  r1 = programString.substring(state.column + 3, state.column + 6);
-                  s = parseInt(programString.substring(state.column + 8, state.column + i), 16);
-                  this.write[state.programIndex++] = 0;
-                  this.write[state.programIndex++] = register.index[r1];
-                  this.write[state.programIndex++] = s;
-                  break;
-                case 8: // [%reg,%reg,$imm]
-                  r0 = programString.substring(state.column + 2, state.column + 5);
-                  r1 = programString.substring(state.column + 7, state.column + 10);
-                  s = parseInt(programString.substring(state.column + 12, state.column + i), 16);
-                  this.write[state.programIndex++] = register.index[r0];
-                  this.write[state.programIndex++] = register.index[r1];
-                  this.write[state.programIndex++] = s;
-                  break;
-                default:
-                  console.log('no');
-                  break;
-              }
-              state.column += i;
-              state.displacement = 1;
+              this.parsePointer();
               break;
+
             case ';':
-              let inst = state.curOp[0];
-              switch(state.curOp[0]) {
-                case 'mov':
-                  inst = `mv${state.curOp[1]}${state.curOp[2]}`;
-                  break;
-                case 'psh':
-                  inst += state.curOp[1];
-                  break;
-                case 'pop':
-                  inst += state.curOp[1];
-                  break;
-                case 'lea':
-                  inst += state.curOp[1];
-                  break;
-                case 'add':
-                  inst = `ad${state.curOp[1]}${state.curOp[2]}`;
-                  break;
-                case 'sub':
-                  inst = `mn${state.curOp[1]}${state.curOp[2]}`;
-                  break;
-                case 'mul':
-                  inst = `im${state.curOp[1]}${state.curOp[2]}`;
-                  break;
-                case 'div':
-                  inst = `id${state.curOp[1]}${state.curOp[2]}`;
-                  break;
-                case 'and':
-                  inst = `an${state.curOp[1]}${state.curOp[2]}`;
-                  break;
-                case 'orr':
-                  inst = `or${state.curOp[1]}${state.curOp[2]}`;
-                  break;
-                case 'xor':
-                  inst = `xr${state.curOp[1]}${state.curOp[2]}`;
-                  break;
-                case 'not':
-                  inst += state.curOp[1];
-                  break;
-                case 'sll':
-                  inst = `sl${state.curOp[1]}${state.curOp[2]}`;
-                  break;
-                case 'slr':
-                  inst = `sr${state.curOp[1]}${state.curOp[2]}`;
-                  break;
-                case 'sar':
-                  inst = `sa${state.curOp[1]}${state.curOp[2]}`;
-                  break;
-                case 'cmp':
-                  inst = `cp${state.curOp[1]}${state.curOp[2]}`;
-                  break;
-                case 'jmp':
-                  inst = 'jump';
-                  break;
-                case 'jeq':
-                  inst = 'jpeq';
-                  break;
-                case 'jne':
-                  inst = 'jpne';
-                  break;
-                case 'jlt':
-                  inst = 'jplt';
-                  break;
-                case 'jgt':
-                  inst = 'jpgt';
-                  break;
-                case 'jlq':
-                  inst = 'jplq';
-                  break;
-                case 'jgq':
-                  inst = 'jpgq';
-                  break;
-                case 'cll':
-                  inst = 'call';
-                  break;
-                case 'ret':
-                  break;
-                case 'stp':
-                  inst = 'stop';
-                  break;
-                default:
-                  inst = 'noop';
-                  break;
-              }
-              this.write[state.opIndex] = instruction[inst];
-              state.opIndex = state.programIndex;
-              state.curOp = [];
-              state.column++;
-              state.expect = 'op';
+              this.handleEOI();
+              this.state.parseIndex++;
               break;
+
             default:
-              state.column++;
+              console.log("can't parse this operation...");
+              break;
           }
           break;
       }
